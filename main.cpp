@@ -43,7 +43,7 @@ int main()
         ss >> offset;
     }
     offset *= 2;
-    offset += 4;
+    offset += 2;
     etn.seekg(offset, ios::beg);
     if (!etn)
     {
@@ -63,18 +63,22 @@ int main()
     cout << "Reg: " << reg << endl;
     etn.close();
 
-    FILE* f = fopen("/dev/etn", "rb");
-    if (f == nullptr)
+    FILE* fr = fopen("/dev/etn", "r+b");
+    if (fr == nullptr)
     {
         perror("fopen");
         cout << "Error open eth " << strerror(errno) << endl;
         exit(0);
     }
 
-    fseek(f, offset, SEEK_SET);
-    fread(buf, 2, 1, f);
+    fseek(fr, offset, SEEK_SET);
+    fread(buf, 2, 1, fr);
     reg = *(reinterpret_cast<uint16_t*>(buf));
     cout << "Reg: " << reg << endl;
+
+    buf[0] = !buf[0];
+    fseek(fr, offset, SEEK_SET);
+    fwrite(buf, 2, 1, fr);
 
     return 0;
 }
