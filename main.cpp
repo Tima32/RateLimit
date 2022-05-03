@@ -2,83 +2,64 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <limits>
+
+#include "ArgumentParser.hpp"
 
 using namespace std;
 
-int main()
+
+void print_help()
 {
-    fstream cr_base_f{"/sys/class/fpga/fpga0/features/RX_RATE_LIMIT/cr_base", ios::in};
-    if (!cr_base_f.is_open())
-    {
-        cerr << "Error open cr_base" << endl;
-        exit(0);
-    }
-    fstream cr_cnt_f{"/sys/class/fpga/fpga0/features/RX_RATE_LIMIT/cr_cnt", ios::in};
-    if (!cr_cnt_f.is_open())
-    {
-        cerr << "Error open cr_base" << endl;
-        exit(0);
-    }
+	cout << 
+	"Usage: rate_limit [command] {args}\n"
+	"Commands:\n"
+	"enable  [port number] Enables traffic limiting.\n"
+	"desable [port number] Disables traffic limiting.\n"
+	"stat    [port number] Displays the port setting.\n"
+	;
+}
+void print_stat()
+{
+	cout << "Stat:" << endl;
+}
+void enable(uint32_t port, bool enable_b)
+{
+	
+}
+int main(int argc, const char **argv)
+{
+	ArgumentParser ap(argc, argv);
 
-    string cr_base;
-    cr_base_f >> cr_base;
-    cout << "cr_base: " << cr_base << endl;
+	//help
+	if (argc == 1 || ap.find("--help") != ArgumentParser::not_found)
+	{
+		print_help();
+		return 0;
+	}
 
-    string cr_cnt;
-    cr_cnt_f >> cr_cnt;
-    cout << "cr_cnt: " << cr_cnt << endl;
+	//enable / disable / stat
+	const string command{ argv[1] };
+	if (command == "stats")
+	{
+		print_stat();
+	}
+	try
+	{
+		if (command == "enable")
+		{
+			auto port = ap.get<uint32_t>("enable");
 
+		}
+		if (command == "disable")
+		{
+			auto port = ap.get<uint32_t>("disable");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		cout << ex.what() << endl;	
+	}
 
-    fstream etn{"/dev/etn", ios::in | ios::out | ios::binary};
-    if (!etn.is_open())
-    {
-        cerr << "Error open etn" << endl;
-        exit(0);
-    }
-
-    size_t offset{0};
-    {
-        stringstream ss;
-        ss << cr_base;
-        ss >> offset;
-    }
-    offset *= 2;
-    offset += 2;
-    etn.seekg(offset, ios::beg);
-    if (!etn)
-    {
-        cerr << "Error seekg: " << std::strerror(errno) << endl;
-    }
-    cout << "offset: " << offset << endl;
-
-
-    uint16_t reg;
-    char buf[10]{0};
-    etn.read(buf, 10);
-    if (!etn)
-    {
-        cerr << "Error: " << std::strerror(errno) << endl;
-    }
-    reg = *(reinterpret_cast<uint16_t*>(buf));
-    cout << "Reg: " << reg << endl;
-    etn.close();
-
-    FILE* fr = fopen("/dev/etn", "r+b");
-    if (fr == nullptr)
-    {
-        perror("fopen");
-        cout << "Error open eth " << strerror(errno) << endl;
-        exit(0);
-    }
-
-    fseek(fr, offset, SEEK_SET);
-    fread(buf, 2, 1, fr);
-    reg = *(reinterpret_cast<uint16_t*>(buf));
-    cout << "Reg: " << reg << endl;
-
-    buf[0] = !buf[0];
-    fseek(fr, offset, SEEK_SET);
-    fwrite(buf, 2, 1, fr);
-
-    return 0;
+	return 0;
 }
