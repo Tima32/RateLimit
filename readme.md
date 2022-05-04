@@ -7,7 +7,7 @@ make all
 ```
 ## Usage
 Usage: rate_limit [command] {args}
-- Commands:\n"
+- Commands:
 - enable  [port number] Enables traffic limiting.
 - desable [port number] Disables traffic limiting.
 - stat    [port number] Displays the port setting.
