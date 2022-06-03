@@ -11,7 +11,10 @@ using namespace std;
 const string cr_base_path("/sys/class/fpga/fpga0/features/RX_RATE_LIMIT/cr_base");
 const string cr_cnt_path("/sys/class/fpga/fpga0/features/RX_RATE_LIMIT/cr_cnt");
 const string etn_path("/dev/etn");
-const uint32_t clk{250000};
+const uint32_t reg_size{ 2 };
+const uint32_t rate_offset{ 1 * reg_size };
+const uint32_t struct_size{ 10 };
+const uint32_t clk{ 250000 };
 
 void print_help()
 {
@@ -22,6 +25,7 @@ void print_help()
 	"disable [port number] Disables traffic limiting.\n"
 	"stat    [port number] Displays the port setting.\n"
 	"rate    [port number] [rate] Set rate limit.\n"
+	"Rate is specified in bit\\s. If rate is not a multiple of 250,000, then it is rounded up to a lower multiple.\n"
 	;
 }
 void print_stat()
@@ -31,20 +35,20 @@ void print_stat()
 	if (!cr_base_f.is_open())
 	{
 		cerr << "Error open cr_base" << endl;
-		exit(0);
+		exit(1);
 	}
 	fstream cr_cnt_f{cr_cnt_path, ios::in};
 	if (!cr_cnt_f.is_open())
 	{
 		cerr << "Error open cr_base" << endl;
-		exit(0);
+		exit(1);
 	}
 	FILE* etn_f = fopen("/dev/etn", "r+b");
 	if (etn_f == nullptr)
 	{
 		perror("fopen");
-		cout << "Error open eth " << strerror(errno) << endl;
-		exit(0);
+		cout << "Error open etn " << strerror(errno) << endl;
+		exit(1);
 	}	
 
 	//read etn position
@@ -56,7 +60,7 @@ void print_stat()
 		ss << cr_base;
 		ss >> offset;
 	}
-	offset *= 2; //Multiply by register size.
+	offset *= reg_size; //Multiply by register size.
 
 	uint16_t reg_enable_0{false};
 	uint16_t reg_rate_limit_0{0};
@@ -64,13 +68,13 @@ void print_stat()
 	uint16_t reg_rate_limit_1{0};
 
 	fseek(etn_f, offset, SEEK_SET);
-	fread(&reg_enable_0, 2, 1, etn_f);
-	fread(&reg_rate_limit_0, 2, 1, etn_f);
+	fread(&reg_enable_0, reg_size, 1, etn_f);
+	fread(&reg_rate_limit_0, reg_size, 1, etn_f);
 
-	offset += 10;
+	offset += struct_size;
 	fseek(etn_f, offset, SEEK_SET);
-	fread(&reg_enable_1, 2, 1, etn_f);
-	fread(&reg_rate_limit_1, 2, 1, etn_f);
+	fread(&reg_enable_1, reg_size, 1, etn_f);
+	fread(&reg_rate_limit_1, reg_size, 1, etn_f);
 
 	fclose(etn_f);
 
@@ -91,20 +95,20 @@ void enable(uint32_t port, bool enable_b)
 	if (!cr_base_f.is_open())
 	{
 		cerr << "Error open cr_base" << endl;
-		exit(0);
+		exit(1);
 	}
 	fstream cr_cnt_f{cr_cnt_path, ios::in};
 	if (!cr_cnt_f.is_open())
 	{
 		cerr << "Error open cr_base" << endl;
-		exit(0);
+		exit(1);
 	}
 	FILE* etn_f = fopen("/dev/etn", "r+b");
 	if (etn_f == nullptr)
 	{
 		perror("fopen");
-		cout << "Error open eth " << strerror(errno) << endl;
-		exit(0);
+		cout << "Error open etn " << strerror(errno) << endl;
+		exit(1);
 	}	
 
 	//read etn position
@@ -117,12 +121,12 @@ void enable(uint32_t port, bool enable_b)
 		ss << cr_base;
 		ss >> offset;
 	}
-	offset *= 2; //Multiply by register size.
-	offset += (10 * port);
+	offset *= reg_size; //Multiply by register size.
+	offset += (struct_size * port);
 	fseek(etn_f, offset, SEEK_SET);
 
 	uint16_t reg{enable_b};
-	fwrite(&reg, 2, 1, etn_f);
+	fwrite(&reg, reg_size, 1, etn_f);
 	fclose(etn_f);
 }
 void rate(uint32_t port, uint16_t rate)
@@ -132,20 +136,20 @@ void rate(uint32_t port, uint16_t rate)
 	if (!cr_base_f.is_open())
 	{
 		cerr << "Error open cr_base" << endl;
-		exit(0);
+		exit(1);
 	}
 	fstream cr_cnt_f{cr_cnt_path, ios::in};
 	if (!cr_cnt_f.is_open())
 	{
 		cerr << "Error open cr_base" << endl;
-		exit(0);
+		exit(1);
 	}
 	FILE* etn_f = fopen("/dev/etn", "r+b");
 	if (etn_f == nullptr)
 	{
 		perror("fopen");
-		cout << "Error open eth " << strerror(errno) << endl;
-		exit(0);
+		cout << "Error open etn " << strerror(errno) << endl;
+		exit(1);
 	}	
 
 	//read etn position
@@ -158,12 +162,12 @@ void rate(uint32_t port, uint16_t rate)
 		ss << cr_base;
 		ss >> offset;
 	}
-	offset *= 2; //Multiply by register size.
-	offset += (10 * port) + 2;
+	offset *= reg_size; //Multiply by register size.
+	offset += (struct_size * port) + rate_offset;
 	fseek(etn_f, offset, SEEK_SET);
 
 	uint16_t reg{rate};
-	fwrite(&reg, 2, 1, etn_f);
+	fwrite(&reg, reg_size, 1, etn_f);
 	fclose(etn_f);
 }
 int main(int argc, const char **argv)
@@ -218,7 +222,8 @@ int main(int argc, const char **argv)
 	}
 	catch(const std::exception& ex)
 	{
-		cout << ex.what() << endl;	
+		cout << ex.what() << endl;
+		return 1;
 	}
 
 	return 0;
