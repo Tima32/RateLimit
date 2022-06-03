@@ -11,6 +11,7 @@ using namespace std;
 const string cr_base_path("/sys/class/fpga/fpga0/features/RX_RATE_LIMIT/cr_base");
 const string cr_cnt_path("/sys/class/fpga/fpga0/features/RX_RATE_LIMIT/cr_cnt");
 const string etn_path("/dev/etn");
+const uint32_t clk{250000};
 
 void print_help()
 {
@@ -19,7 +20,8 @@ void print_help()
 	"Commands:\n"
 	"enable  [port number] Enables traffic limiting.\n"
 	"disable [port number] Disables traffic limiting.\n"
-	"stat    [port number] Displays the port setting.\n"
+	"rate    [port number] Set rate limit.\n"
+	"stat    [port number] [rate] Displays the port setting.\n"
 	;
 }
 void print_stat()
@@ -48,8 +50,6 @@ void print_stat()
 	//read etn position
 	string cr_base;
 	cr_base_f >> cr_base;
-	cout << "cr_base: " << cr_base << endl;
-
 	size_t offset{ 0 };
 	{
 		stringstream ss;
@@ -57,7 +57,6 @@ void print_stat()
 		ss >> offset;
 	}
 	offset *= 2; //Multiply by register size.
-	//offset += (10 * port);
 
 	uint16_t reg_enable_0{false};
 	uint16_t reg_rate_limit_0{0};
@@ -79,11 +78,11 @@ void print_stat()
 
 	cout << "----[Port 0]----" << endl;
 	cout << "Status: " << (reg_enable_0 ? "enable" : "disable") << endl;
-	cout << "Rate: " << reg_rate_limit_0 << endl;
+	cout << "Rate: " << reg_rate_limit_0 * clk << endl;
 
 	cout << "----[Port 1]----" << endl;
 	cout << "Status: " << (reg_enable_1 ? "enable" : "disable") << endl;
-	cout << "Rate: " << reg_rate_limit_1 << endl;
+	cout << "Rate: " << reg_rate_limit_1 * clk << endl;
 }
 void enable(uint32_t port, bool enable_b)
 {
@@ -111,11 +110,6 @@ void enable(uint32_t port, bool enable_b)
 	//read etn position
 	string cr_base;
 	cr_base_f >> cr_base;
-	cout << "cr_base: " << cr_base << endl;
-
-	// string cr_cnt;
-	// cr_cnt_f >> cr_cnt;
-	// cout << "cr_cnt: " << cr_cnt << endl;
 
 	size_t offset{ 0 };
 	{
@@ -128,6 +122,47 @@ void enable(uint32_t port, bool enable_b)
 	fseek(etn_f, offset, SEEK_SET);
 
 	uint16_t reg{enable_b};
+	fwrite(&reg, 2, 1, etn_f);
+	fclose(etn_f);
+}
+void rate(uint32_t port, uint16_t rate)
+{
+	//open files
+	fstream cr_base_f{cr_base_path, ios::in};
+	if (!cr_base_f.is_open())
+	{
+		cerr << "Error open cr_base" << endl;
+		exit(0);
+	}
+	fstream cr_cnt_f{cr_cnt_path, ios::in};
+	if (!cr_cnt_f.is_open())
+	{
+		cerr << "Error open cr_base" << endl;
+		exit(0);
+	}
+	FILE* etn_f = fopen("/dev/etn", "r+b");
+	if (etn_f == nullptr)
+	{
+		perror("fopen");
+		cout << "Error open eth " << strerror(errno) << endl;
+		exit(0);
+	}	
+
+	//read etn position
+	string cr_base;
+	cr_base_f >> cr_base;
+
+	size_t offset{ 0 };
+	{
+		stringstream ss;
+		ss << cr_base;
+		ss >> offset;
+	}
+	offset *= 2; //Multiply by register size.
+	offset += (10 * port) + 2;
+	fseek(etn_f, offset, SEEK_SET);
+
+	uint16_t reg{rate};
 	fwrite(&reg, 2, 1, etn_f);
 	fclose(etn_f);
 }
@@ -163,6 +198,22 @@ int main(int argc, const char **argv)
 			auto port = ap.get<uint32_t>("disable");
 			enable(port, false);
 			return 0;
+		}
+
+		//rate
+		if (command == "rate")
+		{
+			uint32_t port_n{};
+			uint32_t rate_n{};
+
+			auto pos = ap.find(command);
+			auto port_s = ap[pos + 1];
+			auto rate_s = ap[pos + 2];
+
+			std::stringstream ss;
+			ss << port_s << " " << rate_s;
+			ss >> port_n >> rate_n;
+			rate(port_n, rate_n / clk);
 		}
 	}
 	catch(const std::exception& ex)
