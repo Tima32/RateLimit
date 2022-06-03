@@ -18,7 +18,7 @@ void print_help()
 	"Usage: rate_limit [command] {args}\n"
 	"Commands:\n"
 	"enable  [port number] Enables traffic limiting.\n"
-	"desable [port number] Disables traffic limiting.\n"
+	"disable [port number] Disables traffic limiting.\n"
 	"stat    [port number] Displays the port setting.\n"
 	;
 }
@@ -78,11 +78,11 @@ void print_stat()
 	cout << "Statistics:" << endl;
 
 	cout << "----[Port 0]----" << endl;
-	cout << "Status: " << (reg_enable_0 ? "enable" : "desable") << endl;
+	cout << "Status: " << (reg_enable_0 ? "enable" : "disable") << endl;
 	cout << "Rate: " << reg_rate_limit_0 << endl;
 
 	cout << "----[Port 1]----" << endl;
-	cout << "Status: " << (reg_enable_1 ? "enable" : "desable") << endl;
+	cout << "Status: " << (reg_enable_1 ? "enable" : "disable") << endl;
 	cout << "Rate: " << reg_rate_limit_1 << endl;
 }
 void enable(uint32_t port, bool enable_b)
