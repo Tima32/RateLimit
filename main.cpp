@@ -20,8 +20,8 @@ void print_help()
 	"Commands:\n"
 	"enable  [port number] Enables traffic limiting.\n"
 	"disable [port number] Disables traffic limiting.\n"
-	"rate    [port number] Set rate limit.\n"
-	"stat    [port number] [rate] Displays the port setting.\n"
+	"stat    [port number] Displays the port setting.\n"
+	"rate    [port number] [rate] Set rate limit.\n"
 	;
 }
 void print_stat()

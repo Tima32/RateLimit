@@ -11,7 +11,7 @@ Usage: rate_limit [command] {args}
 - enable  [port number] Enables traffic limiting.
 - desable [port number] Disables traffic limiting.
 - stat    [port number] Displays the port setting.
-- stat    [port number] [rate] Displays the port setting.
+- rate    [port number] [rate] Set rate limit (Must be a multiple of 250 000).
 
 ## Example
 ```sh
