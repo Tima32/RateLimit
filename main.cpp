@@ -23,7 +23,7 @@ void print_help()
 	"Commands:\n"
 	"enable  [port number] Enables traffic limiting.\n"
 	"disable [port number] Disables traffic limiting.\n"
-	"stat    [port number] Displays the port setting.\n"
+	"stats   [port number] Displays the port setting.\n"
 	"rate    [port number] [rate] Set rate limit.\n"
 	"Rate is specified in bit\\s. If rate is not a multiple of 250,000, then it is rounded up to a lower multiple.\n"
 	;
